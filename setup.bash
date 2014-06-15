@@ -1,108 +1,134 @@
 #!/bin/bash
 
+SOURCEDIR=/root
+
+
 # update apt repositories
-sudo apt-get update
+apt-get update
 
 #user iface choice
-sudo apt-get -y install python-pip gcc python-dev
-sudo pip install netifaces
-sudo wget https://raw.github.com/andrewmichaelsmith/honeypot-setup-script/master/scripts/iface-choice.py -O /tmp/iface-choice.py
+apt-get -y install python-pip gcc python-dev
+pip install netifaces
+wget https://raw.github.com/rarosalion/honeypot-setup-script/master/scripts/iface-choice.py -O /tmp/iface-choice.py
 python /tmp/iface-choice.py
 iface=$(<~/.honey_iface)
 
-
-# Move SSH server from Port 22 to Port 66534
-sudo sed -i 's:Port 22:Port 65534:g' /etc/ssh/sshd_config
-sudo service ssh reload
-
-
-## install p0f ##
-
-sudo apt-get install -y p0f
-sudo mkdir /var/p0f/
+# Move SSH server from Port 22 to Port 66522
+sed -i 's:Port 22:Port 65522:g' /etc/ssh/sshd_config
+service ssh reload
 
 # dependency for add-apt-repository
-sudo apt-get install -y python-software-properties
+apt-get install -y python-software-properties
 
 ## install dionaea ##
 
 #add dionaea repo
-sudo add-apt-repository -y ppa:honeynet/nightly
-sudo apt-get update
-sudo apt-get install -y dionaea
+add-apt-repository -y ppa:honeynet/nightly
+apt-get update
+apt-get install -y dionaea
 
-#make directories
-sudo mkdir -p /var/dionaea/wwwroot
-sudo mkdir -p /var/dionaea/binaries
-sudo mkdir -p /var/dionaea/log
-sudo mkdir -p /var/dionaea/bistreams
-sudo chown -R nobody:nogroup /var/dionaea/
+
+# Set file permissions
+
+chown -R nobody:nogroup /opt/dionaea/var/dionaea
+chown -R nobody:nogroup /opt/dionaea/var/log
+
 
 #edit config
-sudo wget https://raw.github.com/andrewmichaelsmith/honeypot-setup-script/master/templates/dionaea.conf.tmpl -O /etc/dionaea/dionaea.conf
+wget https://raw.github.com/rarosalion/honeypot-setup-script/master/templates/dionaea.conf.tmpl -O /etc/dionaea/dionaea.conf
 #note that we try and strip :0 and the like from interface here
-sudo sed -i "s|%%IFACE%%|${iface%:*}|g" /etc/dionaea/dionaea.conf
+sed -i "s|%%IFACE%%|${iface%:*}|g" /etc/dionaea/dionaea.conf
+
+
+
 
 ## install kippo - we want the latest so we have to grab the source ##
 
 #kippo dependencies
-sudo apt-get install -y subversion python-dev openssl python-openssl python-pyasn1 python-twisted iptables
+apt-get install -y subversion python-dev openssl python-openssl python-pyasn1 python-twisted iptables
 
 #install kippo to /opt/kippo
-sudo mkdir /opt/kippo/
-sudo svn checkout http://kippo.googlecode.com/svn/trunk/ /opt/kippo/
+mkdir /opt/kippo/
+svn checkout http://kippo.googlecode.com/svn/trunk/ /opt/kippo/
 
-sudo wget https://raw.github.com/andrewmichaelsmith/honeypot-setup-script/master/templates/kippo.cfg.tmpl -O /opt/kippo/kippo.cfg
+wget https://raw.github.com/rarosalion/honeypot-setup-script/master/templates/kippo.cfg.tmpl -O /opt/kippo/kippo.cfg
 
 #add kippo user that can't login
-sudo useradd -r -s /bin/false kippo
+useradd -r -s /bin/false kippo
 
 #set up log dirs
-sudo mkdir -p /var/kippo/dl
-sudo mkdir -p /var/kippo/log/tty
-sudo mkdir -p /var/run/kippo
+mkdir -p /var/kippo/dl
+mkdir -p /var/kippo/log/tty
+mkdir -p /var/run/kippo
 
 #delete old dirs to prevent confusion
-sudo rm -rf /opt/kippo/dl
-sudo rm -rf /opt/kippo/log
+rm -rf /opt/kippo/dl
+rm -rf /opt/kippo/log
 
 #set up permissions
-sudo chown -R kippo:kippo /opt/kippo/
-sudo chown -R kippo:kippo /var/kippo/
-sudo chown -R kippo:kippo /var/run/kippo/
+chown -R kippo:kippo /opt/kippo/
+chown -R kippo:kippo /var/kippo/
+chown -R kippo:kippo /var/run/kippo/
 
 #point port 22 at port 2222 
 #we should have -i $iface here but it was breaking things with virtual interfaces
-sudo iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
+iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
 
 #persist iptables config
-sudo iptables-save > /etc/iptables.rules
+iptables-save > /etc/iptables.rules
 
 #setup iptables restore script
-sudo echo '#!/bin/sh' >> /etc/network/if-up.d/iptablesload 
-sudo echo 'iptables-restore < /etc/iptables.rules' >> /etc/network/if-up.d/iptablesload 
-sudo echo 'exit 0' >> /etc/network/if-up.d/iptablesload 
+echo '#!/bin/sh' >> /etc/network/if-up.d/iptablesload 
+echo 'iptables-restore < /etc/iptables.rules' >> /etc/network/if-up.d/iptablesload 
+echo 'exit 0' >> /etc/network/if-up.d/iptablesload 
 #enable restore script
-sudo chmod +x /etc/network/if-up.d/iptablesload 
+chmod +x /etc/network/if-up.d/iptablesload 
 
 #download init files and install them
-sudo wget https://raw.github.com/andrewmichaelsmith/honeypot-setup-script/master/templates/p0f.init.tmpl -O /etc/init.d/p0f
-sudo sed -i "s|%%IFACE%%|$iface|g" /etc/init.d/p0f
+wget https://raw.github.com/rarosalion/honeypot-setup-script/master/templates/p0f.init.tmpl -O /etc/init.d/p0f
+sed -i "s|%%IFACE%%|$iface|g" /etc/init.d/p0f
 
-sudo wget https://raw.github.com/andrewmichaelsmith/honeypot-setup-script/master/init/dionaea -O /etc/init.d/dionaea
-sudo wget https://raw.github.com/andrewmichaelsmith/honeypot-setup-script/master/init/kippo -O /etc/init.d/kippo
+wget https://raw.github.com/rarosalion/honeypot-setup-script/master/init/dionaea -O /etc/init.d/dionaea
+wget https://raw.github.com/rarosalion/honeypot-setup-script/master/init/kippo -O /etc/init.d/kippo
+
+
+
+# Setup logrotate
+
+cat > /etc/logrotate.d/dionaea <<END
+# logrotate requires dionaea to be started with a pidfile
+# in this case -p /opt/dionaea/var/run/dionaea.pid
+# adjust the path to your needs
+/opt/dionaea/var/log/dionaea*.log {
+        notifempty
+        missingok
+        rotate 28
+        daily
+        delaycompress
+        compress
+        create 660 nobody nogroup
+        dateext
+        postrotate
+                kill -HUP `cat /opt/dionaea/var/dionaea.pid`
+        endscript
+}
+END
+
+
+
+
 
 #install system services
-sudo chmod +x /etc/init.d/p0f
-sudo chmod +x /etc/init.d/dionaea
-sudo chmod +x /etc/init.d/kippo
+chmod +x /etc/init.d/p0f
+chmod +x /etc/init.d/dionaea
+chmod +x /etc/init.d/kippo
 
-sudo update-rc.d p0f defaults
-sudo update-rc.d dionaea defaults
-sudo update-rc.d kippo defaults
+update-rc.d p0f defaults
+update-rc.d dionaea defaults
+update-rc.d kippo defaults
 
 #start the honeypot software
-sudo /etc/init.d/kippo start
-sudo /etc/init.d/p0f start
-sudo /etc/init.d/dionaea start
+/etc/init.d/kippo start
+/etc/init.d/p0f start
+/etc/init.d/dionaea start
 
