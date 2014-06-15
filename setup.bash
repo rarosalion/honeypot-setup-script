@@ -84,14 +84,6 @@ echo 'exit 0' >> /etc/network/if-up.d/iptablesload
 #enable restore script
 chmod +x /etc/network/if-up.d/iptablesload 
 
-#download init files and install them
-wget https://raw.github.com/rarosalion/honeypot-setup-script/master/templates/p0f.init.tmpl -O /etc/init.d/p0f
-sed -i "s|%%IFACE%%|$iface|g" /etc/init.d/p0f
-
-wget https://raw.github.com/rarosalion/honeypot-setup-script/master/init/dionaea -O /etc/init.d/dionaea
-wget https://raw.github.com/rarosalion/honeypot-setup-script/master/init/kippo -O /etc/init.d/kippo
-
-
 
 # Setup logrotate
 
@@ -116,6 +108,11 @@ END
 
 
 
+
+#download init files and install them
+wget https://raw.github.com/rarosalion/honeypot-setup-script/master/init/p0f -O /etc/init.d/p0f
+wget https://raw.github.com/rarosalion/honeypot-setup-script/master/init/dionaea -O /etc/init.d/dionaea
+wget https://raw.github.com/rarosalion/honeypot-setup-script/master/init/kippo -O /etc/init.d/kippo
 
 
 #install system services
