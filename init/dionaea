@@ -15,12 +15,13 @@
 # Process name ( For display )
 NAME=dionaea
 # Daemon name, where is the actual executable
-DAEMON=/usr/bin/dionaea
+DAEMON=/opt/dionaea/bin/dionaea
 
 # pid file for the daemon
-PIDFILE=/var/run/dionaea.pid
+PIDFILE=/opt/dionaea/var/dionaea.pid
 
-PARAMETERS="-c /etc/dionaea/dionaea.conf -w /var/dionaea -u nobody -g nogroup -D -p $PIDFILE"
+PARAMETERS="-u nobody -g nogroup -c /opt/dionaea/etc/dionaea/dionaea.conf -w /opt/dionaea -p $PIDFILE -D"
+
 
 # If the daemon is not there, then exit.
 test -x $DAEMON || exit 5
